@@ -45,11 +45,9 @@ extra-source-files:  ChangeLog.md
 -- Constraint on the version of Cabal needed to build this package.
 cabal-version:       >=1.10
 
+executable deepidd
+  main-is:		Main.hs
 
-library
-  -- Modules exported by the library.
-  exposed-modules:     Main
-  
   -- Modules included in this library but not exported.
   -- other-modules:       
   

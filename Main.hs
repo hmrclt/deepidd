@@ -6,7 +6,7 @@ import qualified Data.Map as M
 import Data.List.Split
 import CamelCase
 import Data.Char (isAlphaNum)
-
+import System.Environment (getArgs)
 
 fieldTypeMap :: String -> String
 fieldTypeMap "CHAR" = "String"
@@ -14,7 +14,9 @@ fieldTypeMap "AD_PSTCD1" = "String"
 fieldTypeMap "AD_SMTPADR" = "String"
 fieldTypeMap "LAND1" = "String"
 fieldTypeMap "DATS" = "Date"
-fieldTypeMap _ = "Any"
+fieldTypeMap "BOO" = "Boolean"
+fieldTypeMap "NUMC" = "Int"
+fieldTypeMap x = "??" ++ x ++ "??"
 
 beginsWith :: Eq a => [a] -> [a] -> Bool
 beginsWith [] _ = True
@@ -37,8 +39,8 @@ plain b = writePlain def (Pandoc nullMeta b)
 field :: M.Map String String -> String
 field fieldMap = "  " ++ name ++ ": " ++ ftype
   where name = toCamelCase $ fieldMap M.! "FIELD"
-        ftype = opt isOpt $ fieldTypeMap $ fieldMap M.! "DATA TYPE"
-        isOpt = fieldMap M.! "OPTION" == "Optional"
+        ftype = opt isOpt $ fieldTypeMap $ M.findWithDefault "Nothing" "DATA TYPE" fieldMap 
+        isOpt = M.findWithDefault "Mandatory" "OPTION" fieldMap == "Optional"
 
 caseClass :: String -> [M.Map String String] -> String
 caseClass x _ | filter isAlphaNum x == "" = "\t"
@@ -51,7 +53,7 @@ applyHeaders headers = fmap zipWithHeaders
   where zipWithHeaders i  = M.fromList $ zip (fmap colMap headers) i
 
 extract :: [String] -> [[String]] -> [String]
-extract headers body = fmap (\(n:b) -> caseClass (unwords n) (applyHeaders headers b)) chunks 
+extract headers body = fmap (\(n:b) -> caseClass (unwords n) (applyHeaders headers b)) chunks
   where chunks       = supersplit body
         supersplit   = (split.dropInitBlank.keepDelimsL.whenElt) (\x -> length x == 1)
 
@@ -69,6 +71,7 @@ deepidd (Pandoc _ blocks) = intercalate "\n\n" $ catMaybes $ fmap deepiddTab blo
 
 main :: IO ()
 main = do
-  f <- readDocx def <$> BL.readFile "spec.docx"
+  file <- head <$> getArgs
+  f <- readDocx def <$> BL.readFile file
   case f of Right (a,_) -> putStrLn $ deepidd a
             Left e -> print e
